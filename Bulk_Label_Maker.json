@@ -1,0 +1,604 @@
+{
+  "name": "Bulk Label Maker",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        300
+      ],
+      "id": "ed42f554-6a86-44b2-91ef-723281224fb3"
+    },
+    {
+      "parameters": {
+        "operation": "list",
+        "useQueryString": true,
+        "queryString": "='{{$node[\"Global Variables\"].json[\"ParentFolderID\"]}}' in parents",
+        "options": {
+          "fields": [
+            "*"
+          ]
+        }
+      },
+      "name": "Google Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 1,
+      "position": [
+        720,
+        420
+      ],
+      "id": "8717e868-02cf-423b-bf3a-580027a304ee",
+      "credentials": {
+        "googleApi": {
+          "id": "24",
+          "name": "Djangelic Service Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "order",
+        "operation": "getAll",
+        "options": {
+          "status": "processing"
+        }
+      },
+      "name": "WooCommerce",
+      "type": "n8n-nodes-base.wooCommerce",
+      "typeVersion": 1,
+      "position": [
+        320,
+        300
+      ],
+      "id": "f0c58c06-bcde-4176-a3f1-492033a0b29e",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "45",
+          "name": "WooCommerce account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "TemplateID",
+              "value": "1ZsW-_El4ZB9pM74G5l0HN7TgFgYbPONq2zKTrTVRP98"
+            },
+            {
+              "name": "ParentFolderID",
+              "value": "113wBUvyKFFR4unCIbBhMorOfsZjL9w0C"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Global Variables",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        140,
+        300
+      ],
+      "id": "009d2cbb-eef6-4382-90b6-3e0cd5433842"
+    },
+    {
+      "parameters": {
+        "operation": "sort",
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "createdTime",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Sort Labels",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 1,
+      "position": [
+        900,
+        420
+      ],
+      "id": "b0e0194d-e961-4b08-be7a-675b09df4153"
+    },
+    {
+      "parameters": {
+        "operation": "limit"
+      },
+      "name": "Isolate Most Recent",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 1,
+      "position": [
+        1080,
+        420
+      ],
+      "id": "135fdf54-8bcc-4045-b044-738326f60e0b"
+    },
+    {
+      "parameters": {
+        "functionCode": "const newItems = [];\n\nfor (let i=1;i<33;i++) {\n  newItems.push({\n    json: {\n      id: i\n    }\n  });\n}\n\nreturn newItems;\n"
+      },
+      "name": "Generate 32 Slots",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1420,
+        420
+      ],
+      "id": "50b94857-d387-46c6-828c-532148b57c30"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json[\"occurrencesChanged\"]}}",
+              "operation": "largerEqual",
+              "value2": 1
+            }
+          ]
+        }
+      },
+      "name": "Check if Label Updated",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2320,
+        520
+      ],
+      "id": "e9153937-9276-453f-9825-2d7f0d33ab3c"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "Iterate Labels",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        1660,
+        520
+      ],
+      "id": "bc4f2d47-054c-4cb2-826e-c278bd5b435b"
+    },
+    {
+      "parameters": {},
+      "name": "Check for more Orders",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        3500,
+        140
+      ],
+      "id": "e120a78e-5073-4d22-9fa3-5fa1f8957de5"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$node[\"Iterate Labels\"].json[\"id\"]}}",
+              "operation": "equal",
+              "value2": 32
+            }
+          ]
+        }
+      },
+      "name": "Check if 32nd Label",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2560,
+        620
+      ],
+      "id": "88176979-0508-4cd6-91f8-e52491a862b6"
+    },
+    {
+      "parameters": {
+        "operation": "copy",
+        "fileId": "={{$node[\"Global Variables\"].json[\"TemplateID\"]}}",
+        "options": {
+          "name": "={{$node[\"Google Drive\"].json[\"name\"]}} - {{$node[\"Get Today\"].json[\"today\"]}}",
+          "parents": [
+            "={{$node[\"Global Variables\"].json[\"ParentFolderID\"]}}"
+          ]
+        }
+      },
+      "name": "Deploy Template",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 1,
+      "position": [
+        2780,
+        560
+      ],
+      "id": "d27100aa-7987-4263-bfc4-92f3b5b9c613",
+      "credentials": {
+        "googleApi": {
+          "id": "24",
+          "name": "Djangelic Service Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "const today = new Date().toISOString();\n\nitems[0].json.today = today;\nreturn items;\n"
+      },
+      "name": "Get Today",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1240,
+        420
+      ],
+      "id": "2aae5a21-27d8-4d78-86f3-68855c3892ea"
+    },
+    {
+      "parameters": {},
+      "name": "Check if Successful",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        3180,
+        560
+      ],
+      "id": "00d37722-8983-49bf-82d9-cc6f2e0be323"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "Iterate Orders",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        540,
+        420
+      ],
+      "id": "d40921ed-7bd4-409f-8b13-208dce7039c0"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{$node[\"Isolate Most Recent\"].json[\"id\"]}}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "replaceAll",
+              "text": "=--Name {{$json[\"id\"]}}--",
+              "replaceText": "={{$node[\"Iterate Orders\"].json[\"shipping\"][\"first_name\"]}} {{$node[\"Iterate Orders\"].json[\"shipping\"][\"last_name\"]}}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "=--Street {{$json[\"id\"]}}--",
+              "replaceText": "={{$node[\"Iterate Orders\"].json[\"shipping\"][\"address_1\"]}} {{$node[\"Iterate Orders\"].json[\"shipping\"][\"address_2\"]}}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "=--Address {{$json[\"id\"]}}--",
+              "replaceText": "={{$node[\"Iterate Orders\"].json[\"shipping\"][\"city\"]}}, {{$node[\"Iterate Orders\"].json[\"shipping\"][\"state\"]}} {{$node[\"Iterate Orders\"].json[\"shipping\"][\"postcode\"]}} - {{$node[\"Iterate Orders\"].json[\"shipping\"][\"country\"]}}"
+            }
+          ]
+        }
+      },
+      "name": "Try to update labels",
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 1,
+      "position": [
+        2100,
+        520
+      ],
+      "id": "2994150c-1af4-49ec-a54e-2fa8a12633c4",
+      "credentials": {
+        "googleApi": {
+          "id": "24",
+          "name": "Djangelic Service Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{$node[\"Deploy Template\"].json[\"id\"]}}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "replaceAll",
+              "text": "=--Name 1--",
+              "replaceText": "={{$node[\"Iterate Orders\"].json[\"shipping\"][\"first_name\"]}} {{$node[\"Iterate Orders\"].json[\"shipping\"][\"last_name\"]}}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "=--Street 1--",
+              "replaceText": "={{$node[\"Iterate Orders\"].json[\"shipping\"][\"address_1\"]}} {{$node[\"Iterate Orders\"].json[\"shipping\"][\"address_2\"]}}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "=--Address 1--",
+              "replaceText": "={{$node[\"Iterate Orders\"].json[\"shipping\"][\"city\"]}}, {{$node[\"Iterate Orders\"].json[\"shipping\"][\"state\"]}} {{$node[\"Iterate Orders\"].json[\"shipping\"][\"postcode\"]}} - {{$node[\"Iterate Orders\"].json[\"shipping\"][\"country\"]}}"
+            }
+          ]
+        }
+      },
+      "name": "Update Deployed Page Label",
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 1,
+      "position": [
+        2980,
+        560
+      ],
+      "id": "8b4c695e-5335-403a-a339-d4466f90dcf9",
+      "credentials": {
+        "googleApi": {
+          "id": "24",
+          "name": "Djangelic Service Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "unit": "seconds"
+      },
+      "name": "Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1880,
+        520
+      ],
+      "webhookId": "a1f7405d-c114-4605-af23-512b519136d6",
+      "id": "d4662af3-304d-45ed-9188-b21d285981fb"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Global Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Global Variables": {
+      "main": [
+        [
+          {
+            "node": "WooCommerce",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WooCommerce": {
+      "main": [
+        [
+          {
+            "node": "Iterate Orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Sort Labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort Labels": {
+      "main": [
+        [
+          {
+            "node": "Isolate Most Recent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Isolate Most Recent": {
+      "main": [
+        [
+          {
+            "node": "Get Today",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate 32 Slots": {
+      "main": [
+        [
+          {
+            "node": "Iterate Labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Iterate Labels": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Label Updated": {
+      "main": [
+        [
+          {
+            "node": "Check for more Orders",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check if 32nd Label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for more Orders": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Iterate Orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if 32nd Label": {
+      "main": [
+        [
+          {
+            "node": "Deploy Template",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Iterate Labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Today": {
+      "main": [
+        [
+          {
+            "node": "Generate 32 Slots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deploy Template": {
+      "main": [
+        [
+          {
+            "node": "Update Deployed Page Label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Successful": {
+      "main": [
+        [
+          {
+            "node": "Check for more Orders",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check for more Orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Iterate Orders": {
+      "main": [
+        [
+          {
+            "node": "Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Try to update labels": {
+      "main": [
+        [
+          {
+            "node": "Check if Label Updated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Deployed Page Label": {
+      "main": [
+        [
+          {
+            "node": "Check if Successful",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Try to update labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "id": 59,
+  "meta": {
+    "instanceId": "03e9d14e9196363fe7191ce21dc0bb17387a6e755dcc9acc4f5904752919dca8"
+  },
+  "tags": [
+    {
+      "id": "1",
+      "name": "Production",
+      "createdAt": "2021-06-09T00:55:27.109Z",
+      "updatedAt": "2021-06-09T00:55:27.109Z"
+    },
+    {
+      "id": "10",
+      "name": "Tara's Books",
+      "createdAt": "2021-11-05T21:22:51.875Z",
+      "updatedAt": "2021-11-05T21:22:51.875Z"
+    }
+  ]
+}
